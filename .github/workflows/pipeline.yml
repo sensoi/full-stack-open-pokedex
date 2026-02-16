@@ -43,7 +43,7 @@ jobs:
           wait-on: http://localhost:5000
 
       - name: Trigger Render Deploy
-        if: success()
+        if: ${{ github.event_name == 'push' }}
         run: |
           curl "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
