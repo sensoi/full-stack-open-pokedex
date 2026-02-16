@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
 
       - name: Install dependencies
         run: npm install
@@ -36,3 +36,7 @@ jobs:
           command: npm run test:e2e
           start: npm run start-prod
           wait-on: http://localhost:5000
+
+      - name: Trigger Render Deploy
+        if: success()
+        run: curl ${{ secrets.RENDER_DEPLOY_H
