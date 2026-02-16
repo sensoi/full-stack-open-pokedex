@@ -1,4 +1,4 @@
-name: CI pipeline
+name: Deployment pipeline
 
 on:
   push:
@@ -9,9 +9,11 @@ on:
       - main
     types: [opened, synchronize]
 
+env:
+  SKIP_COMMIT: ${{ contains(join(github.event.commits.*.message, ' '), '#skip') }}
 
 jobs:
-  pipeline:
+  simple_deployment_pipeline:
     runs-on: ubuntu-latest
 
     steps:
@@ -43,7 +45,21 @@ jobs:
           wait-on: http://localhost:5000
 
       - name: Trigger Render Deploy
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && env.SKIP_COMMIT != 'true' }}
         run: |
           curl "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
+  tag_release:
+    needs: [simple_deployment_pipeline]
+    if: ${{ github.event_name == 'push' && env.SKIP_COMMIT != 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.70.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
