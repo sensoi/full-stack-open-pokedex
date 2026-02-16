@@ -9,9 +9,6 @@ on:
       - main
     types: [opened, synchronize]
 
-env:
-  SKIP_COMMIT: ${{ contains(join(github.event.commits.*.message, ' '), '#skip') }}
-
 jobs:
   simple_deployment_pipeline:
     runs-on: ubuntu-latest
@@ -45,13 +42,13 @@ jobs:
           wait-on: http://localhost:5000
 
       - name: Trigger Render Deploy
-        if: ${{ github.event_name == 'push' && env.SKIP_COMMIT != 'true' }}
+        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         run: |
           curl "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
   tag_release:
     needs: [simple_deployment_pipeline]
-    if: ${{ github.event_name == 'push' && env.SKIP_COMMIT != 'true' }}
+    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     runs-on: ubuntu-latest
 
     steps:
