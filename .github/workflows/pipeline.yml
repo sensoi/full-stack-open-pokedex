@@ -42,7 +42,7 @@ jobs:
           wait-on: http://localhost:5000
 
       - name: Trigger Render Deploy
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         run: |
           curl "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
@@ -60,3 +60,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
+
+  notify_discord:
+    needs: [simple_deployment_pipeline, tag_release]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Send success notification
+        if: ${{ needs.simple_deployment_pipeline.result == 'success' && needs.tag_release.result == 'success' }}
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            ✅ New version deployed successfully!
+            Repository: ${{ github.repository }}
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+
+      - name: Send failure notification
+        if: ${{ needs.simple_deployment_pipeline.result == 'failure' }}
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            ❌ Build failed!
+            Repository: ${{ github.repository }}
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+            Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
